@@ -1,0 +1,10 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/url_db
+    username: user
+    password: password
+  main:
+    allow-bean-definition-overriding: true
