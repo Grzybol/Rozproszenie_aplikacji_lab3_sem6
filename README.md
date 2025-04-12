@@ -29,9 +29,10 @@ docker-compose up
 Poczekaj, aż Cassandra wystartuje i aplikacje się połączą (może to chwilę potrwać – logi pomogą).
 
 🌐 API
-Skracanie linku:
+Skracanie linku - parametr ttl jest opcjonalny:
 ```
-GET http://localhost:8080/shorten?url=https://example.com&ttl=60
+GET
+http://localhost:8080/shorten?url=https://example.com&ttl=60
 ```
 Zwraca skrócony link, np. 
 ```http://localhost:8080/abc123```
