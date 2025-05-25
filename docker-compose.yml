@@ -82,6 +82,8 @@ services:
     build:
       context: ./url-cleaner
     container_name: url-cleaner
+    ports:
+      - "8082:8082"
     depends_on:
       - cass1
       - url-shortener
