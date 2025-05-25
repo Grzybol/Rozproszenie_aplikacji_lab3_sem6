@@ -73,6 +73,18 @@ services:
       - "8081:8081"
     depends_on:
       - cass1
+      - url-shortener
+    networks:
+      - cassandra
+
+  # Serwis czyszczący stare wpisy
+  url-cleaner:
+    build:
+      context: ./url-cleaner
+    container_name: url-cleaner
+    depends_on:
+      - cass1
+      - url-shortener
     networks:
       - cassandra
 
