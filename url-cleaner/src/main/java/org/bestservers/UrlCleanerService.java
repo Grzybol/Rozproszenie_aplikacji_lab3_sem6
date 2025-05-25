@@ -5,6 +5,7 @@ import com.datastax.oss.driver.api.core.cql.ResultSet;
 import com.datastax.oss.driver.api.core.cql.Row;
 import com.datastax.oss.driver.api.core.cql.SimpleStatement;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -125,4 +126,12 @@ public class UrlCleanerService {
             System.out.println("✅ Usunięto przeterminowanych: " + deleted + " wpisów.");
         }
     }
+    @PreDestroy
+    public void shutdown() {
+        if (session != null && !session.isClosed()) {
+            System.out.println("🛑 Zamykam sesję Cassandra...");
+            session.close();
+        }
+    }
+
 }

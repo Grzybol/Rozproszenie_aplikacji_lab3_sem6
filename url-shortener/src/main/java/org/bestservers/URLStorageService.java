@@ -7,23 +7,38 @@ import com.datastax.oss.driver.api.core.cql.ResultSet;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import com.datastax.oss.driver.api.core.CqlIdentifier;
-
+import org.springframework.stereotype.Service;
+import jakarta.annotation.PreDestroy;
 
 import java.net.InetSocketAddress;
 import java.time.Instant;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
+
+@Service
 public class URLStorageService {
 
-    private CqlSession session;
+    private final CqlSession session;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final String[] blacklist;
 
-
-    public URLStorageService() {
+    @Autowired
+    public URLStorageService(
+            KafkaTemplate<String, String> kafkaTemplate,
+            @Value("${url.blacklist}") String blacklistString
+    ) {
+        this.kafkaTemplate = kafkaTemplate;
+        this.blacklist = blacklistString.split(",");
         int attempts = 0;
+        CqlSession tempSession = null;
         while (attempts < 10) {
             try {
                 // Najpierw łączymy się BEZ keyspace, żeby go ewentualnie stworzyć
-                CqlSession tempSession = CqlSession.builder()
+                tempSession = CqlSession.builder()
                         .addContactPoint(new InetSocketAddress("cass1", 9042))
                         .withLocalDatacenter("dc1")
                         .build();
@@ -46,13 +61,12 @@ public class URLStorageService {
                 tempSession.close();
 
                 // Teraz łączymy się już z właściwym keyspace
-                this.session = CqlSession.builder()
+                tempSession = CqlSession.builder()
                         .addContactPoint(new InetSocketAddress("cass1", 9042))
                         .withLocalDatacenter("dc1")
                         .withKeyspace("url_shortener")
                         .build();
-
-                ensureTableExists(); // <- sprawdzenie i tworzenie tabeli
+                System.out.println("✅ Połączono z Cassandra w keyspace 'url_shortener'.");
                 break; // sukces!
             } catch (Exception e) {
                 attempts++;
@@ -65,11 +79,13 @@ public class URLStorageService {
             }
         }
 
-        if (this.session == null) {
+        if (tempSession  == null) {
             throw new RuntimeException("Couldn't connect to Cassandra after retries.");
         }
+        this.session = tempSession;
         ensureTableExists();
     }
+
 
     private void ensureTableExists() {
         String checkTableQuery = "SELECT table_name FROM system_schema.tables WHERE keyspace_name = 'url_shortener' AND table_name = 'links';";
@@ -97,6 +113,21 @@ public class URLStorageService {
         UUID id = UUID.randomUUID();
         Instant createdAt = Instant.now();
 
+        // 🔍 Blacklist check
+        for (String word : blacklist) {
+            if (originalUrl.toLowerCase().contains(word.trim().toLowerCase())) {
+                String msg = String.format("{\"timestamp\":\"%s\",\"url\":\"%s\",\"matched\":\"%s\"}",
+                        Instant.now(), originalUrl, word.trim());
+                try {
+                    kafkaTemplate.send("url-blacklist-alerts", msg);
+                    System.out.println("🚨 Wysłano alert na Kafkę: " + msg);
+                } catch (Exception e) {
+                    System.out.println("Kafka failed: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }
+
         String query = "INSERT INTO links (id, short_code, original_url, created_at) " +
                 "VALUES (?, ?, ?, ?)";
 
@@ -105,6 +136,13 @@ public class URLStorageService {
         );
 
         System.out.println("✅ Inserted: " + shortUrl + " → " + originalUrl);
+    }
+    @PreDestroy
+    public void shutdown() {
+        if (session != null && !session.isClosed()) {
+            System.out.println("🛑 Zamykam sesję Cassandra...");
+            session.close();
+        }
     }
 
 }

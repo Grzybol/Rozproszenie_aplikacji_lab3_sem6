@@ -11,7 +11,13 @@ import java.time.Instant;
 public class URLShortenerController {
 
     private final URLShortenerService urlShortenerService = new URLShortenerService();
-    private final URLStorageService urlStorageService = new URLStorageService();
+    //private final URLStorageService urlStorageService = new URLStorageService();
+    private final URLStorageService urlStorageService;
+
+    public URLShortenerController(URLStorageService urlStorageService) {
+        this.urlStorageService = urlStorageService;
+    }
+
 
     @GetMapping("/shorten")
     public String shortenURL(@RequestParam String url, @RequestParam(required = false, defaultValue = "600") int ttl) {
@@ -34,50 +40,4 @@ public class URLShortenerController {
             return sb.toString();
         }
     }
-
-    /*
-    private static class URLStorageService {
-        private final String url = "jdbc:postgresql://postgres:5432/url_db";
-        private final String user = "user";
-        private final String password = "password";
-        private final URLShortenerService urlShortenerService = new URLShortenerService();
-        private final URLStorageService urlStorageService = new URLStorageService();
-
-        public URLStorageService() {
-            try (Connection conn = DriverManager.getConnection(url, user, password);
-                 Statement stmt = conn.createStatement()) {
-
-                String sql = "CREATE TABLE IF NOT EXISTS urls (" +
-                        "short_url VARCHAR(10) PRIMARY KEY," +
-                        "original_url TEXT NOT NULL," +
-                        "expiry_timestamp TIMESTAMP NOT NULL)";
-                stmt.execute(sql);
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-
-
-
-        public void storeUrl(String shortUrl, String originalUrl, int ttl) {
-            try (Connection conn = DriverManager.getConnection(url, user, password)) {
-                String insert = "INSERT INTO urls (short_url, original_url, expiry_timestamp) VALUES (?, ?, ?)";
-                try (PreparedStatement pstmt = conn.prepareStatement(insert)) {
-                    pstmt.setString(1, shortUrl);
-                    pstmt.setString(2, originalUrl);
-                    pstmt.setTimestamp(3, Timestamp.from(Instant.now().plusSeconds(ttl)));
-                    pstmt.executeUpdate();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-        @GetMapping("/shorten")
-        public String shortenURL(@RequestParam String url, @RequestParam(defaultValue = "60") int ttl) {
-            String shortUrl = urlShortenerService.generateShortUrl();
-            urlStorageService.storeUrl(shortUrl, url, ttl);
-            return "http://localhost:8080/" + shortUrl;
-        }
-    }
-    */
 }
