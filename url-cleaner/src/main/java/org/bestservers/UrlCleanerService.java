@@ -5,6 +5,8 @@ import com.datastax.oss.driver.api.core.cql.ResultSet;
 import com.datastax.oss.driver.api.core.cql.Row;
 import com.datastax.oss.driver.api.core.cql.SimpleStatement;
 import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.net.InetSocketAddress;
@@ -17,14 +19,37 @@ public class UrlCleanerService {
 
     private final CqlSession session;
     private final CleanupConfig config;
-
-    public UrlCleanerService(CleanupConfig config) {
+    @Autowired
+    public UrlCleanerService(@Qualifier("cleanupConfig") CleanupConfig config) {
         this.config = config;
-        this.session = CqlSession.builder()
-                .addContactPoint(new InetSocketAddress("cass1", 9042))
-                .withLocalDatacenter("dc1")
-                .withKeyspace("url_shortener")
-                .build();
+
+        // ⏳ Retry logic na start sesji
+        CqlSession tempSession = null;
+        int attempts = 0;
+        while (attempts < 10) {
+            try {
+                tempSession = CqlSession.builder()
+                        .addContactPoint(new InetSocketAddress("cass1", 9042))
+                        .withLocalDatacenter("dc1")
+                        .withKeyspace("url_shortener")
+                        .build();
+                System.out.println("✅ Połączono z Cassandra.");
+                break;
+            } catch (Exception e) {
+                attempts++;
+                System.out.println("❌ Cassandra not ready, retrying... (" + attempts + "/10)");
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException ignored) {
+                }
+            }
+        }
+
+        if (tempSession == null) {
+            throw new RuntimeException("💥 Nie udało się połączyć z Cassandra po 10 próbach.");
+        }
+
+        this.session = tempSession;
     }
 
     @PostConstruct
