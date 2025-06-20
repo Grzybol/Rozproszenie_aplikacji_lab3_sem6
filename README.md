@@ -40,6 +40,17 @@ Zwraca skrócony link, np.
 Przekierowanie:
 Wejdź w ```http://localhost:8080/abc123```, a zostaniesz przekierowany na oryginalny link (jeśli nie wygasł).
 
+Jak to sprawdzić?
+Możesz bardzo prosto to przetestować — np. odpalić kafka-console-consumer, żeby ręcznie zobaczyć, czy wiadomości są w topicu:
+
+bash
+```
+docker exec -it kafka /bin/bash
+```
+# potem w środku kontenera:
+```
+kafka-console-consumer --bootstrap-server kafka:9092 --topic url-blacklist-alerts --from-beginning
+```
 ⚠️ Uwaga
 TTL (czas życia linku) domyślnie to 60 sekund.
 Linki zapisywane są w bazie Cassandra (musisz poczekać, aż klaster w pełni się zsynchronizuje).
