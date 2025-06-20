@@ -47,7 +47,7 @@ bash
 ```
 docker exec -it kafka /bin/bash
 ```
-# potem w środku kontenera:
+potem w środku kontenera:
 ```
 kafka-console-consumer --bootstrap-server kafka:9092 --topic url-blacklist-alerts --from-beginning
 ```
