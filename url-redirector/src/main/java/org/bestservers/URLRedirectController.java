@@ -58,7 +58,7 @@ public class URLRedirectController {
 
 
         public String getOriginalUrl(String shortUrl) {
-            String query = "SELECT original_url, created_at FROM links WHERE short_code = ? LIMIT 1";
+            String query = "SELECT original_url, created_at FROM links WHERE short_code = ?  LIMIT 1 ALLOW FILTERING";
 
             Row row = session.execute(
                     SimpleStatement.newInstance(query, shortUrl)
