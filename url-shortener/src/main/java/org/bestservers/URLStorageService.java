@@ -26,15 +26,23 @@ public class URLStorageService {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final String[] blacklist;
 
+    // Aplikacja główna
     @Autowired
     public URLStorageService(
+            // Wstrzykiwanie KafkaTemplate do wysyłania alertów
             KafkaTemplate<String, String> kafkaTemplate,
+            // Wstrzykiwanie blacklisty z pliku konfiguracyjnego
             @Value("${url.blacklist}") String blacklistString
     ) {
+        // Inicjalizacja KafkaTemplate i blacklisty
         this.kafkaTemplate = kafkaTemplate;
+        // Rozdzielenie blacklisty na tablicę słów
         this.blacklist = blacklistString.split(",");
+        // Próba połączenia z bazą danych Cassandra
         int attempts = 0;
+        // Tworzymy sesję Cassandra
         CqlSession tempSession = null;
+        // Pętla próbująca połączyć się z bazą danych
         while (attempts < 10) {
             try {
                 // Najpierw łączymy się BEZ keyspace, żeby go ewentualnie stworzyć
@@ -48,6 +56,7 @@ public class URLStorageService {
                         .getKeyspaces()
                         .containsKey(CqlIdentifier.fromCql("url_shortener"));
 
+                // Jeśli keyspace nie istnieje, tworzymy go
                 if (!keyspaceExists) {
                     System.out.println("⚠️ Keyspace 'url_shortener' nie istnieje. Tworzymy go...");
                     String createKeyspace = "CREATE KEYSPACE IF NOT EXISTS url_shortener WITH replication = " +
@@ -58,6 +67,7 @@ public class URLStorageService {
                     System.out.println("✅ Keyspace 'url_shortener' już istnieje.");
                 }
 
+                // Zamykamy tymczasową sesję bez keyspace
                 tempSession.close();
 
                 // Teraz łączymy się już z właściwym keyspace
@@ -134,7 +144,6 @@ public class URLStorageService {
         session.execute(
                 SimpleStatement.newInstance(query, id, shortUrl, originalUrl, createdAt)
         );
-
         System.out.println("✅ Inserted: " + shortUrl + " → " + originalUrl);
     }
     @PreDestroy

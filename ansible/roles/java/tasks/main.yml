@@ -1,0 +1,52 @@
+---
+# Instalacja Java
+
+- name: Add OpenJDK repository (Ubuntu)
+  apt_repository:
+    repo: "ppa:openjdk-r/ppa"
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Install OpenJDK {{ java_version }}
+  apt:
+    name: "openjdk-{{ java_version }}-jdk"
+    state: present
+    update_cache: yes
+  when: ansible_os_family == "Debian"
+
+- name: Install OpenJDK {{ java_version }} (RedHat)
+  yum:
+    name: "java-{{ java_version }}-openjdk-devel"
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Set JAVA_HOME environment variable
+  lineinfile:
+    path: /etc/environment
+    line: 'JAVA_HOME=/usr/lib/jvm/java-{{ java_version }}-openjdk-amd64'
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Set JAVA_HOME environment variable (RedHat)
+  lineinfile:
+    path: /etc/environment
+    line: 'JAVA_HOME=/usr/lib/jvm/java-{{ java_version }}-openjdk'
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Create Java configuration for application user
+  template:
+    src: java-env.sh.j2
+    dest: "{{ app_base_path }}/java-env.sh"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0644'
+
+- name: Verify Java installation
+  command: java -version
+  register: java_version_output
+  changed_when: false
+
+- name: Display Java version
+  debug:
+    msg: "{{ java_version_output.stdout_lines }}" 

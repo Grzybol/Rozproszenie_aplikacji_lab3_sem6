@@ -1,0 +1,47 @@
+---
+- name: Backup URL Shortener Application
+  hosts: all
+  become: yes
+  gather_facts: no
+
+  tasks:
+    - name: Create backup directory
+      file:
+        path: "{{ backup_path }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+
+    - name: Run backup script
+      command: "{{ app_base_path }}/scripts/backup.sh"
+      become_user: "{{ app_user }}"
+      register: backup_result
+
+    - name: Display backup result
+      debug:
+        msg: "{{ backup_result.stdout_lines }}"
+
+    - name: List recent backups
+      find:
+        paths: "{{ backup_path }}"
+        patterns: "*.tar.gz"
+        age: "{{ backup_retention_days }}d"
+      register: recent_backups
+
+    - name: Display recent backups
+      debug:
+        msg: |
+          Recent backups:
+          {% for backup in recent_backups.files %}
+          - {{ backup.path | basename }} ({{ backup.size | filesizeformat }})
+          {% endfor %}
+
+    - name: Check backup size
+      stat:
+        path: "{{ backup_path }}"
+      register: backup_dir_stats
+
+    - name: Display backup directory size
+      debug:
+        msg: "Total backup directory size: {{ backup_dir_stats.stat.size | filesizeformat }}" 

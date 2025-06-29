@@ -1,0 +1,85 @@
+---
+# Podstawowa konfiguracja serwera
+- name: Update package cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+
+- name: Install essential packages
+  apt:
+    name:
+      - curl
+      - wget
+      - git
+      - vim
+      - htop
+      - unzip
+      - software-properties-common
+      - apt-transport-https
+      - ca-certificates
+      - gnupg
+      - lsb-release
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Install essential packages (RedHat)
+  yum:
+    name:
+      - curl
+      - wget
+      - git
+      - vim
+      - htop
+      - unzip
+      - yum-utils
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Set timezone
+  timezone:
+    name: "{{ timezone }}"
+
+- name: Create application user
+  user:
+    name: "{{ app_user }}"
+    group: "{{ app_group }}"
+    system: yes
+    shell: /bin/bash
+    home: "{{ app_base_path }}"
+    create_home: yes
+
+- name: Create application directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+  loop:
+    - "{{ app_base_path }}"
+    - "{{ backup_path }}"
+    - "{{ logs_path }}"
+    - "{{ app_base_path }}/config"
+    - "{{ app_base_path }}/scripts"
+
+- name: Configure SSH for application user
+  authorized_key:
+    user: "{{ app_user }}"
+    state: present
+    key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+  when: lookup('file', '~/.ssh/id_rsa.pub') is not none
+
+- name: Configure system limits
+  pam_limits:
+    domain: "{{ app_user }}"
+    limit_type: '-'
+    limit_item: nofile
+    value: 65536
+
+- name: Configure system limits for all users
+  pam_limits:
+    domain: '*'
+    limit_type: '-'
+    limit_item: nofile
+    value: 65536 

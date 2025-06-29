@@ -1,0 +1,38 @@
+---
+- name: Deploy URL Shortener Application
+  hosts: all
+  become: yes
+  gather_facts: yes
+  
+  pre_tasks:
+    - name: Update package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+  roles:
+    - common
+    - docker
+    - java
+    - url-shortener
+
+  post_tasks:
+    - name: Display deployment summary
+      debug:
+        msg: |
+          🎉 URL Shortener deployment completed!
+          
+          Environment: {{ environment }}
+          Application: {{ app_name }}
+          Version: {{ app_version }}
+          
+          Services:
+          - URL Shortener: http://{{ ansible_default_ipv4.address }}:{{ url_shortener_port }}
+          - URL Redirector: http://{{ ansible_default_ipv4.address }}:{{ url_redirector_port }}
+          - Cassandra: {{ ansible_default_ipv4.address }}:{{ cassandra_port }}
+          - Kafka: {{ ansible_default_ipv4.address }}:{{ kafka_port }}
+          
+          Health Check: {{ app_base_path }}/scripts/health-check.sh
+          Backup Script: {{ app_base_path }}/scripts/backup.sh
+          Logs: {{ logs_path }} 

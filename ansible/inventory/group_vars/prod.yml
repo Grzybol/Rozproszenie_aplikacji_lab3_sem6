@@ -1,0 +1,41 @@
+# Zmienne dla środowiska produkcyjnego
+environment: production
+debug_mode: false
+
+# Konfiguracja zasobów
+cassandra_nodes: 3
+kafka_brokers: 3
+app_instances: 2
+
+# Limity zasobów (większe dla prod)
+cassandra_memory: "2g"
+kafka_memory: "1g"
+app_memory: "1g"
+
+# Logging
+log_level: "INFO"
+enable_file_logging: true
+log_rotation: true
+
+# Backup (częściej dla prod)
+backup_retention_days: 30
+backup_schedule: "0 2 * * *"  # Codziennie o 2:00
+
+# Monitoring (pełny dla prod)
+enable_monitoring: true
+enable_alerting: true
+prometheus_retention_days: 30
+grafana_admin_password: "{{ vault_grafana_password }}"
+
+# Security
+enable_ssl: true
+enable_firewall: true
+enable_audit_logging: true
+
+# Docker settings
+docker_registry: "registry.example.com"
+use_local_images: false
+
+# High Availability
+enable_ha: true
+load_balancer_enabled: true 

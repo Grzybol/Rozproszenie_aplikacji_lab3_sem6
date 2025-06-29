@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# Backup script for URL Shortener application
+set -e
+
+BACKUP_DIR="{{ backup_path }}"
+TIMESTAMP=$(date '+%Y%m%d_%H%M%S')
+BACKUP_NAME="url-shortener-backup-${TIMESTAMP}"
+LOG_FILE="{{ logs_path }}/backup.log"
+
+# Function to log messages
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+log "Starting backup process..."
+
+# Create backup directory
+mkdir -p "${BACKUP_DIR}/${BACKUP_NAME}"
+
+# Backup Docker Compose configuration
+log "Backing up Docker Compose configuration..."
+cp "{{ docker_compose_path }}" "${BACKUP_DIR}/${BACKUP_NAME}/"
+
+# Backup application logs
+log "Backing up application logs..."
+if [ -d "{{ logs_path }}" ]; then
+    tar -czf "${BACKUP_DIR}/${BACKUP_NAME}/logs.tar.gz" -C "{{ logs_path }}" .
+fi
+
+# Backup Cassandra data (if running)
+log "Backing up Cassandra data..."
+if docker ps | grep -q cassandra; then
+    docker exec cass1 cqlsh -e "DESCRIBE KEYSPACES;" > "${BACKUP_DIR}/${BACKUP_NAME}/cassandra-schema.cql" 2>/dev/null || true
+    
+    # Create snapshot of Cassandra data
+    docker exec cass1 nodetool snapshot url_shortener > /dev/null 2>&1 || true
+    log "Cassandra snapshot created"
+fi
+
+# Backup application configuration
+log "Backing up application configuration..."
+if [ -d "{{ app_base_path }}/config" ]; then
+    tar -czf "${BACKUP_DIR}/${BACKUP_NAME}/config.tar.gz" -C "{{ app_base_path }}/config" .
+fi
+
+# Create backup manifest
+cat > "${BACKUP_DIR}/${BACKUP_NAME}/backup-manifest.txt" << EOF
+Backup created: $(date)
+Environment: {{ environment }}
+Application: {{ app_name }}
+Version: {{ app_version }}
+Services:
+- URL Shortener: {{ url_shortener_port }}
+- URL Redirector: {{ url_redirector_port }}
+- Cassandra: {{ cassandra_port }}
+- Kafka: {{ kafka_port }}
+EOF
+
+# Compress backup
+log "Compressing backup..."
+cd "${BACKUP_DIR}"
+tar -czf "${BACKUP_NAME}.tar.gz" "${BACKUP_NAME}"
+rm -rf "${BACKUP_NAME}"
+
+# Cleanup old backups
+log "Cleaning up old backups..."
+find "${BACKUP_DIR}" -name "*.tar.gz" -mtime +{{ backup_retention_days }} -delete
+
+log "Backup completed successfully: ${BACKUP_NAME}.tar.gz"
+log "Backup size: $(du -h "${BACKUP_DIR}/${BACKUP_NAME}.tar.gz" | cut -f1)" 

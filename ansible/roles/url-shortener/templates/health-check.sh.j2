@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# Health check script for URL Shortener application
+set -e
+
+LOG_FILE="{{ logs_path }}/health-check.log"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+# Function to log messages
+log() {
+    echo "[$TIMESTAMP] $1" >> "$LOG_FILE"
+}
+
+# Check if Docker is running
+if ! docker info > /dev/null 2>&1; then
+    log "ERROR: Docker is not running"
+    exit 1
+fi
+
+# Check Cassandra
+if curl -f -s "http://localhost:{{ cassandra_port }}/" > /dev/null; then
+    log "INFO: Cassandra is healthy"
+else
+    log "ERROR: Cassandra is not responding"
+    exit 1
+fi
+
+# Check URL Shortener service
+if curl -f -s "http://localhost:{{ url_shortener_port }}/actuator/health" > /dev/null; then
+    log "INFO: URL Shortener service is healthy"
+else
+    log "ERROR: URL Shortener service is not responding"
+    exit 1
+fi
+
+# Check URL Redirector service
+if curl -f -s "http://localhost:{{ url_redirector_port }}/actuator/health" > /dev/null; then
+    log "INFO: URL Redirector service is healthy"
+else
+    log "ERROR: URL Redirector service is not responding"
+    exit 1
+fi
+
+# Check Kafka
+if curl -f -s "http://localhost:{{ kafka_port }}/" > /dev/null; then
+    log "INFO: Kafka is healthy"
+else
+    log "WARNING: Kafka is not responding (optional service)"
+fi
+
+log "INFO: All critical services are healthy"
+exit 0 

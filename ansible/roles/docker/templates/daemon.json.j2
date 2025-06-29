@@ -1,0 +1,21 @@
+{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  },
+  "storage-driver": "overlay2",
+  "storage-opts": [
+    "overlay2.override_kernel_check=true"
+  ],
+  "default-ulimits": {
+    "nofile": {
+      "Hard": 65536,
+      "Name": "nofile",
+      "Soft": 65536
+    }
+  },
+  "live-restore": true,
+  "userland-proxy": false,
+  "experimental": false
+} 

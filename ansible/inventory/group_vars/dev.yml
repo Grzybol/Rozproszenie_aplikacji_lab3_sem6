@@ -1,0 +1,30 @@
+# Zmienne dla środowiska deweloperskiego
+environment: dev
+debug_mode: true
+
+# Konfiguracja zasobów
+cassandra_nodes: 1
+kafka_brokers: 1
+app_instances: 1
+
+# Limity zasobów (mniejsze dla dev)
+cassandra_memory: "512m"
+kafka_memory: "256m"
+app_memory: "256m"
+
+# Logging
+log_level: "DEBUG"
+enable_file_logging: true
+
+# Backup (rzadziej dla dev)
+backup_retention_days: 3
+backup_schedule: "0 3 * * *"  # Codziennie o 3:00
+
+# Monitoring (podstawowy dla dev)
+enable_monitoring: true
+enable_alerting: false
+prometheus_retention_days: 7
+
+# Docker settings
+docker_registry: ""
+use_local_images: true 

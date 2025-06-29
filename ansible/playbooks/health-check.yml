@@ -1,0 +1,82 @@
+---
+- name: Health Check URL Shortener Application
+  hosts: all
+  become: no
+  gather_facts: no
+
+  tasks:
+    - name: Check Docker status
+      command: docker info
+      register: docker_status
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Display Docker status
+      debug:
+        msg: "Docker is {{ 'running' if docker_status.rc == 0 else 'not running' }}"
+
+    - name: Check running containers
+      command: docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+      register: running_containers
+      changed_when: false
+
+    - name: Display running containers
+      debug:
+        msg: "{{ running_containers.stdout_lines }}"
+
+    - name: Check Cassandra health
+      uri:
+        url: "http://localhost:{{ cassandra_port }}/"
+        method: GET
+        timeout: 10
+      register: cassandra_health
+      ignore_errors: yes
+
+    - name: Display Cassandra health
+      debug:
+        msg: "Cassandra is {{ 'healthy' if cassandra_health.status == 200 else 'unhealthy' }}"
+
+    - name: Check URL Shortener health
+      uri:
+        url: "http://localhost:{{ url_shortener_port }}/actuator/health"
+        method: GET
+        timeout: 10
+      register: shortener_health
+      ignore_errors: yes
+
+    - name: Display URL Shortener health
+      debug:
+        msg: "URL Shortener is {{ 'healthy' if shortener_health.status == 200 else 'unhealthy' }}"
+
+    - name: Check URL Redirector health
+      uri:
+        url: "http://localhost:{{ url_redirector_port }}/actuator/health"
+        method: GET
+        timeout: 10
+      register: redirector_health
+      ignore_errors: yes
+
+    - name: Display URL Redirector health
+      debug:
+        msg: "URL Redirector is {{ 'healthy' if redirector_health.status == 200 else 'unhealthy' }}"
+
+    - name: Check system resources
+      shell: |
+        echo "CPU Usage: $(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'%' -f1)%"
+        echo "Memory Usage: $(free | grep Mem | awk '{printf("%.2f%%", $3/$2 * 100.0)}')"
+        echo "Disk Usage: $(df -h / | awk 'NR==2 {print $5}')"
+      register: system_resources
+      changed_when: false
+
+    - name: Display system resources
+      debug:
+        msg: "{{ system_resources.stdout_lines }}"
+
+    - name: Check recent logs
+      shell: tail -n 20 "{{ logs_path }}/health-check.log" 2>/dev/null || echo "No health check logs found"
+      register: recent_logs
+      changed_when: false
+
+    - name: Display recent logs
+      debug:
+        msg: "{{ recent_logs.stdout_lines }}" 

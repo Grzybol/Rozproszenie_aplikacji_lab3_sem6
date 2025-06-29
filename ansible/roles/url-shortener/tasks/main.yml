@@ -1,0 +1,105 @@
+---
+# Deployment aplikacji URL Shortener
+
+- name: Copy application files
+  copy:
+    src: "{{ item }}"
+    dest: "{{ app_base_path }}/"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0644'
+  loop:
+    - docker-compose.yml
+    - docker-compose.override.yml
+  when: item is defined
+
+- name: Copy application configuration
+  template:
+    src: "{{ item }}"
+    dest: "{{ app_base_path }}/{{ item | basename | splitext | first }}"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0644'
+  loop:
+    - application.properties.j2
+    - application.yml.j2
+  when: item is defined
+
+- name: Build application images
+  docker_compose:
+    project_src: "{{ app_base_path }}"
+    build: yes
+    pull: yes
+    state: present
+  become_user: "{{ app_user }}"
+  when: use_local_images | default(true)
+
+- name: Pull application images from registry
+  docker_compose:
+    project_src: "{{ app_base_path }}"
+    pull: yes
+    state: present
+  become_user: "{{ app_user }}"
+  when: not use_local_images | default(true) and docker_registry is defined
+
+- name: Start application services
+  docker_compose:
+    project_src: "{{ app_base_path }}"
+    state: present
+    restarted: yes
+  become_user: "{{ app_user }}"
+
+- name: Wait for Cassandra to be ready
+  uri:
+    url: "http://localhost:{{ cassandra_port }}/"
+    method: GET
+    status_code: 200
+  register: cassandra_ready
+  until: cassandra_ready.status == 200
+  retries: 30
+  delay: 10
+  ignore_errors: yes
+
+- name: Wait for application to be ready
+  uri:
+    url: "http://localhost:{{ url_shortener_port }}/actuator/health"
+    method: GET
+    status_code: 200
+  register: app_ready
+  until: app_ready.status == 200
+  retries: 20
+  delay: 5
+  ignore_errors: yes
+
+- name: Create health check script
+  template:
+    src: health-check.sh.j2
+    dest: "{{ app_base_path }}/scripts/health-check.sh"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+
+- name: Create backup script
+  template:
+    src: backup.sh.j2
+    dest: "{{ app_base_path }}/scripts/backup.sh"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+
+- name: Setup cron job for health checks
+  cron:
+    name: "URL Shortener Health Check"
+    minute: "*/5"
+    job: "{{ app_base_path }}/scripts/health-check.sh >> {{ logs_path }}/health-check.log 2>&1"
+    user: "{{ app_user }}"
+    state: present
+
+- name: Setup cron job for backups
+  cron:
+    name: "URL Shortener Backup"
+    minute: "{{ backup_schedule.split(' ')[0] }}"
+    hour: "{{ backup_schedule.split(' ')[1] }}"
+    job: "{{ app_base_path }}/scripts/backup.sh >> {{ logs_path }}/backup.log 2>&1"
+    user: "{{ app_user }}"
+    state: present 

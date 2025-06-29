@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Java Environment Variables
+export JAVA_HOME={{ ansible_env.JAVA_HOME | default('/usr/lib/jvm/java-11-openjdk-amd64') }}
+export PATH=$JAVA_HOME/bin:$PATH
+
+# JVM Options for URL Shortener
+export JAVA_OPTS="-Xms{{ app_memory }} -Xmx{{ app_memory }} -XX:+UseG1GC -XX:+UseStringDeduplication"
+
+# Application specific options
+export SPRING_PROFILES_ACTIVE="{{ environment }}"
+export LOG_LEVEL="{{ log_level }}" 

@@ -1,0 +1,8 @@
+---
+# Domyślne zmienne dla role common
+app_user: url-shortener
+app_group: url-shortener
+app_base_path: /opt/url-shortener
+backup_path: /opt/url-shortener/backups
+logs_path: /opt/url-shortener/logs
+timezone: Europe/Warsaw 

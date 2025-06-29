@@ -1,0 +1,42 @@
+# Globalne zmienne dla wszystkich środowisk
+app_name: url-shortener
+app_version: "1.0.0"
+
+# Wersje oprogramowania
+java_version: "11"
+docker_version: "24.0.5"
+docker_compose_version: "2.20.0"
+cassandra_version: "3.11.8"
+kafka_version: "7.5.0"
+prometheus_version: "2.45.0"
+grafana_version: "10.0.0"
+
+# Porty aplikacji
+url_shortener_port: 8080
+url_redirector_port: 8081
+url_cleaner_port: 8082
+cassandra_port: 9042
+kafka_port: 9092
+prometheus_port: 9090
+grafana_port: 3000
+
+# Ścieżki
+app_base_path: "/opt/{{ app_name }}"
+docker_compose_path: "{{ app_base_path }}/docker-compose.yml"
+backup_path: "{{ app_base_path }}/backups"
+logs_path: "{{ app_base_path }}/logs"
+
+# Użytkownicy
+app_user: "{{ app_name }}"
+app_group: "{{ app_name }}"
+
+# Timezone
+timezone: "Europe/Warsaw"
+
+# Backup settings
+backup_retention_days: 7
+backup_schedule: "0 2 * * *"  # Codziennie o 2:00
+
+# Monitoring
+enable_monitoring: true
+enable_alerting: true 
