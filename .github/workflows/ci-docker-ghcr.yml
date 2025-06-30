@@ -40,3 +40,19 @@ jobs:
       - name: Push Docker image
         run: |
           docker push ghcr.io/$REPO_OWNER_LC/url-shortener:latest
+
+      - name: Install jq (JSON parser)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Make GHCR package public
+        env:
+          TOKEN: ${{ secrets.CR_PAT }}
+        run: |
+          PACKAGE="url-shortener"
+          OWNER=$REPO_OWNER_LC
+
+          curl -X PATCH \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/users/$OWNER/packages/container/$PACKAGE/visibility \
+            -d '{"visibility":"public"}'
