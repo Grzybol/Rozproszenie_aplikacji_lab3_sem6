@@ -1,6 +1,7 @@
 # 🔗 Rozproszone Aplikacje - URL Shortener
 
-Projekt stworzony na potrzeby zajęć z **Aplikacji Rozproszonych** – system do skracania, przekierowywania i czyszczenia URL-i przy użyciu **Spring Boot + Cassandra + Docker**.
+Projekt stworzony na potrzeby zajęć z **Aplikacji Rozproszonych** oraz **
+Automatyzacja procesów w inżynierii oprogramowania** – system do skracania, przekierowywania i czyszczenia URL-i przy użyciu **Spring Boot + Cassandra + Docker**.
 
 ## 🧱 Architektura
 
