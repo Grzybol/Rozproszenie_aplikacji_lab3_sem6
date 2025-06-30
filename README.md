@@ -82,3 +82,7 @@ kafka-console-consumer --bootstrap-server kafka:9092 --topic url-blacklist-alert
 ---
 
 Każdy serwis posiada własny plik `Dockerfile` i konfigurację. Szczegóły endpointów znajdziesz w kodzie źródłowym poszczególnych mikroserwisów.
+
+## Dokumentacja
+
+- [Zobacz opis CI/CD](ci-cd-opis.md)
