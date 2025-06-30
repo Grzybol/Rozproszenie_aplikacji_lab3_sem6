@@ -1,0 +1,58 @@
+name: CI + Docker + GHCR (url-shortener)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set lowercase repo owner
+        run: echo "REPO_OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Build url-shortener with Maven
+        working-directory: ./url-shortener
+        run: mvn clean verify
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Build Docker image
+        run: |
+          docker build -t ghcr.io/$REPO_OWNER_LC/url-shortener:latest ./url-shortener
+
+      - name: Push Docker image
+        run: |
+          docker push ghcr.io/$REPO_OWNER_LC/url-shortener:latest
+
+      - name: Install jq (JSON parser)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Make GHCR package public
+        env:
+          TOKEN: ${{ secrets.CR_PAT }}
+        run: |
+          PACKAGE="url-shortener"
+          OWNER=$REPO_OWNER_LC
+
+          curl -X PATCH \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/users/$OWNER/packages/container/$PACKAGE/visibility \
+            -d '{"visibility":"public"}'
