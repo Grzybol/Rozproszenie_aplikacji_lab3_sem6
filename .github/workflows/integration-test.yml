@@ -1,0 +1,59 @@
+name: Integration Test with Cassandra
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+
+    services:
+      cassandra:
+        image: cassandra:3.11
+        ports:
+          - 9042:9042
+        options: >-
+          --health-cmd="cqlsh -e 'describe keyspaces'" 
+          --health-interval=10s 
+          --health-timeout=5s 
+          --health-retries=10
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set lowercase repo owner
+        run: echo "REPO_OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+
+      - name: Build Docker image for url-shortener
+        run: docker build -t url-shortener-test ./url-shortener
+
+      - name: Run url-shortener container
+        run: |
+          docker run -d --name shortener \
+            --network="host" \
+            -e SPRING_PROFILES_ACTIVE=dev \
+            -e CASSANDRA_HOST=localhost \
+            -p 8080:8080 \
+            url-shortener-test
+          
+          echo "Czekam na start aplikacji..."
+          sleep 20
+
+      - name: Test API (shorten + redirect)
+        run: |
+          set -e
+
+          SHORT=$(curl -s -X POST http://localhost:8080/shorten \
+            -H "Content-Type: application/json" \
+            -d '{"url":"https://example.com"}' | jq -r .shortCode)
+
+          echo "Wygenerowany shortCode: $SHORT"
+
+          curl -s -I http://localhost:8080/$SHORT | grep -q "302"
+
+      - name: Stop container
+        if: always()
+        run: docker rm -f shortener || true
