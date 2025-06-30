@@ -1,4 +1,4 @@
-name: CI + Docker + GHCR
+name: CI + Docker + GHCR (url-shortener)
 
 on:
   push:
@@ -22,8 +22,9 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Build with Maven
-        run: mvn -B clean verify
+      - name: Build url-shortener (Maven)
+        working-directory: ./url-shortener
+        run: mvn clean verify
 
   docker-build-push:
     runs-on: ubuntu-latest
@@ -41,9 +42,7 @@ jobs:
           password: ${{ secrets.CR_PAT }}
 
       - name: Build Docker image
-        run: |
-          docker build -t $IMAGE_NAME:latest ./url-shortener
+        run: docker build -t $IMAGE_NAME:latest ./url-shortener
 
       - name: Push image to GHCR
-        run: |
-          docker push $IMAGE_NAME:latest
+        run: docker push $IMAGE_NAME:latest
