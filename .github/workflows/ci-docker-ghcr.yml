@@ -6,7 +6,7 @@ on:
   pull_request:
 
 env:
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/url-shortener
+   IMAGE_NAME: ghcr.io/${{ github.repository_owner.toLowerCase() }}/url-shortener
 
 jobs:
   build-test:
